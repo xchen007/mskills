@@ -90,8 +90,6 @@ RESET  = '\033[0m';  BOLD   = '\033[1m';  DIM    = '\033[2m'
 CYAN   = '\033[96m'; GREEN  = '\033[92m'; YELLOW = '\033[93m'
 RED    = '\033[91m'; BLUE   = '\033[94m'; MAGENTA= '\033[95m'
 
-MAX_SUMMARY = 60
-
 def c_key(s):      return CYAN + BOLD + s + RESET
 def c_status(s):
     if s in ('Resolved','Done','Closed'):      return GREEN + s + RESET
@@ -122,7 +120,6 @@ def fmt_done(ds):
         return dt.strftime('%Y-%m-%d')
     except: return ds[:10]
 
-def trunc(s, n): return s[:n-1] + '…' if len(s) > n else s
 def pad(colored, raw_len, width): return colored + ' ' * max(0, width - raw_len)
 
 issues = json.load(open(os.environ['TMP_FILE'])).get('issues', [])
@@ -132,7 +129,7 @@ for i in issues:
     f   = i['fields']
     key = i['key']
     sts = (f.get('status')   or {}).get('name', '?')
-    smr = trunc(f.get('summary') or '', MAX_SUMMARY)
+    smr = f.get('summary') or ''
     pri = (f.get('priority') or {}).get('name', '-')
     pts = str(f.get('customfield_10016') or '-')
     est = fmt_time(f.get('timeoriginalestimate'))
