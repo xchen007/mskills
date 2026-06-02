@@ -83,51 +83,74 @@ TMP_FILE="$TMP_TICKETS" python3 << 'EOF'
 import json, os
 from datetime import datetime, timezone
 
-def fmt_time(seconds):
-    if not seconds: return '-'
-    h, m = divmod(seconds // 60, 60)
+RESET  = '\033[0m';  BOLD   = '\033[1m';  DIM    = '\033[2m'
+CYAN   = '\033[96m'; GREEN  = '\033[92m'; YELLOW = '\033[93m'
+RED    = '\033[91m'; BLUE   = '\033[94m'; MAGENTA= '\033[95m'
+
+MAX_SUMMARY = 60
+
+def c_key(s):      return CYAN + BOLD + s + RESET
+def c_status(s):
+    if s in ('Resolved','Done','Closed'):      return GREEN + s + RESET
+    if s in ('In Progress','In Review'):       return YELLOW + s + RESET
+    if s == 'Blocked':                         return RED + BOLD + s + RESET
+    return DIM + s + RESET
+def c_pri(s):
+    if s in ('P1','Highest','Critical'):       return RED + BOLD + s + RESET
+    if s in ('P2','High'):                     return RED + s + RESET
+    if s in ('P3','Medium'):                   return YELLOW + s + RESET
+    return DIM + s + RESET
+
+def fmt_time(sec):
+    if not sec: return '-'
+    h, m = divmod(sec // 60, 60)
     return f'{h}h {m}m' if m else f'{h}h'
 
-def fmt_done(date_str):
-    if not date_str: return '-'
+def fmt_done(ds):
+    if not ds: return '-'
     try:
-        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        dt   = datetime.fromisoformat(ds.replace('Z','+00:00'))
         days = (datetime.now(timezone.utc) - dt).days
         if days == 0: return 'today'
         if days == 1: return 'yesterday'
-        if days < 7:  return f'{days}d ago'
+        if days <  7: return f'{days}d ago'
         if days < 14: return 'last week'
         if days < 30: return f'{days//7}w ago'
         return dt.strftime('%Y-%m-%d')
-    except: return date_str[:10]
+    except: return ds[:10]
+
+def trunc(s, n): return s[:n-1] + '…' if len(s) > n else s
+def pad(colored, raw_len, width): return colored + ' ' * max(0, width - raw_len)
 
 issues = json.load(open(os.environ['TMP_FILE'])).get('issues', [])
-rows   = []
+raw_rows = []
+col_rows = []
 for i in issues:
-    f = i['fields']
-    rows.append([
-        i['key'],
-        (f.get('status')    or {}).get('name', '?'),
-        (f.get('summary')   or ''),
-        (f.get('priority')  or {}).get('name', '-'),
-        str(f.get('customfield_10016') or '-'),
-        fmt_time(f.get('timeoriginalestimate')),
-        fmt_time(f.get('timespent')),
-        (f.get('assignee')  or {}).get('displayName', 'Unassigned'),
-        fmt_done(f.get('resolutiondate')),
-        (f.get('issuetype') or {}).get('name', '?'),
-        (f.get('project')   or {}).get('name', '?'),
-    ])
+    f   = i['fields']
+    key = i['key']
+    sts = (f.get('status')   or {}).get('name', '?')
+    smr = trunc(f.get('summary') or '', MAX_SUMMARY)
+    pri = (f.get('priority') or {}).get('name', '-')
+    pts = str(f.get('customfield_10016') or '-')
+    est = fmt_time(f.get('timeoriginalestimate'))
+    log = fmt_time(f.get('timespent'))
+    asn = (f.get('assignee') or {}).get('displayName', 'Unassigned')
+    don = fmt_done(f.get('resolutiondate'))
+    typ = (f.get('issuetype')or {}).get('name', '?')
+    prj = (f.get('project')  or {}).get('name', '?')
+    raw_rows.append([key, sts, smr, pri, pts, est, log, asn, don, typ, prj])
+    col_rows.append([c_key(key), c_status(sts), smr, c_pri(pri), pts, est, log, asn, don, typ, prj])
 
-hdrs   = ['KEY', 'STATUS', 'SUMMARY', 'PRI', 'PTS', 'EST.', 'LOG', 'ASSIGNEE', 'DONE', 'TYPE', 'PROJECT']
-widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(hdrs)]
-fmt    = '  '.join(f'{{:<{w}}}' for w in widths)
-sep    = '  '.join('-' * w for w in widths)
-print(fmt.format(*hdrs))
-print(sep)
-for r in rows:
-    print(fmt.format(*r))
-print(f'\nTotal: {len(issues)} tickets')
+hdrs   = ['KEY','STATUS','SUMMARY','PRI','PTS','EST.','LOG','ASSIGNEE','DONE','TYPE','PROJECT']
+widths = [max(len(h), max((len(r[i]) for r in raw_rows), default=0)) for i,h in enumerate(hdrs)]
+sep    = '  '.join('-'*w for w in widths)
+hdr_ln = '  '.join(BOLD + h.ljust(widths[i]) + RESET for i,h in enumerate(hdrs))
+print(hdr_ln)
+print(DIM + sep + RESET)
+for ri, row in enumerate(col_rows):
+    cells = [pad(row[i], len(raw_rows[ri][i]), widths[i]) for i in range(len(hdrs))]
+    print('  '.join(cells))
+print(f'\n{BOLD}Total: {len(issues)} tickets{RESET}')
 EOF
 rm "$TMP_TICKETS"
 ```
