@@ -23,7 +23,7 @@ curl -s -H "Authorization: Bearer $JIRA_API_TOKEN" \
   -G --data-urlencode "jql=sprint = ${SPRINT_ID} AND assignee = currentUser() ORDER BY updated DESC" \
   --data-urlencode "maxResults=100" \
   --data-urlencode "fields=summary,assignee,status,updated,issuetype,priority" | \
-  python3 -c "
+  python3 << 'EOF'
 import sys, json
 from collections import defaultdict
 data   = json.load(sys.stdin)
@@ -41,12 +41,12 @@ for i in issues:
     })
 for assignee, tickets in groups.items():
     print(f'── {assignee} ({len(tickets)}) ──')
-    print(f\"  {'KEY':<15} {'STATUS':<14} {'TYPE':<18} {'UPDATED':<12} SUMMARY\")
+    print(f"  {'KEY':<15} {'STATUS':<14} {'TYPE':<18} {'UPDATED':<12} SUMMARY")
     print('  ' + '-'*95)
     for t in tickets:
-        print(f\"  {t['key']:<15} {t['status']:<14} {t['type']:<18} {t['updated']:<12} {t['summary']}\")
-print(f'\\nTotal: {len(issues)} tickets')
-"
+        print(f"  {t['key']:<15} {t['status']:<14} {t['type']:<18} {t['updated']:<12} {t['summary']}")
+print(f'\nTotal: {len(issues)} tickets')
+EOF
 ```
 
 ## Query: All Tickets in a Sprint (all assignees)
