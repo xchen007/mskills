@@ -23,7 +23,7 @@ curl -s -H "Authorization: Bearer $JIRA_API_TOKEN" \
   -G --data-urlencode "jql=project = ${PROJECT} AND updated >= ${TIME_WINDOW} ORDER BY updated DESC" \
   --data-urlencode "maxResults=200" \
   --data-urlencode "fields=customfield_12501" | \
-  python3 -c "
+  SPRINT_PREFIX="$SPRINT_PREFIX" python3 << 'EOF'
 import sys, json, re, os
 prefix = os.environ.get('SPRINT_PREFIX', 'SDS-CP-Sprint')
 seen = {}
@@ -42,8 +42,8 @@ for i in json.load(sys.stdin).get('issues', []):
                 'end':   ed.group(1)[:10] if ed and ed.group(1) not in ('<null>','null') else '-',
             }
 for name, v in sorted(seen.items()):
-    print(f\"{name}  ID:{v['id']}  {v['start']} -> {v['end']}\")
-" SPRINT_PREFIX="$SPRINT_PREFIX"
+    print(f"{name}  ID:{v['id']}  {v['start']} -> {v['end']}")
+EOF
 ```
 
 ## Query: List All Historical Sprints (~3.5s)
@@ -60,7 +60,7 @@ curl -s -H "Authorization: Bearer $JIRA_API_TOKEN" \
   -G --data-urlencode "jql=project = ${PROJECT} AND updated >= ${TIME_WINDOW} ORDER BY updated DESC" \
   --data-urlencode "maxResults=500" \
   --data-urlencode "fields=customfield_12501" | \
-  python3 -c "
+  SPRINT_PREFIX="$SPRINT_PREFIX" python3 << 'EOF'
 import sys, json, re, os
 prefix = os.environ.get('SPRINT_PREFIX', 'SDS-CP-Sprint')
 seen = {}
@@ -79,13 +79,13 @@ for i in json.load(sys.stdin).get('issues', []):
                 'start': sd.group(1)[:10] if sd and sd.group(1) not in ('<null>','null') else '-',
                 'end':   ed.group(1)[:10] if ed and ed.group(1) not in ('<null>','null') else '-',
             }
-print(f\"{'Sprint Name':<35} {'ID':<8} {'State':<8} {'Start':<12} End\")
+print(f"{'Sprint Name':<35} {'ID':<8} {'State':<8} {'Start':<12} End")
 print('-'*75)
 for name, v in sorted(seen.items()):
     marker = ' ◀ ACTIVE' if v['state'] == 'ACTIVE' else (' ◀ FUTURE' if v['state'] == 'FUTURE' else '')
-    print(f\"{name:<35} {v['id']:<8} {v['state']:<8} {v['start']:<12} {v['end']}{marker}\")
-print(f'\\n{len(seen)} sprints found')
-" SPRINT_PREFIX="$SPRINT_PREFIX"
+    print(f"{name:<35} {v['id']:<8} {v['state']:<8} {v['start']:<12} {v['end']}{marker}")
+print(f'\n{len(seen)} sprints found')
+EOF
 ```
 
 ## Time Window Reference
@@ -107,6 +107,7 @@ print(f'\\n{len(seen)} sprints found')
 | Sprint Autocomplete API | 15-result cap; misses the current ACTIVE Sprint |
 | `sprint in openSprints()` | Requires user–Board association; returns empty without it |
 | Board name filter (`?name=SDS`) | Misses Boards with generic names (e.g. "Control Plane") |
+| `python3 -c "...multiline..."` | Agent collapses newlines to literal `\n` → `SyntaxError: unexpected character after line continuation character`. Use heredoc (`python3 << 'EOF'`) instead. |
 
 ## Next Step
 
