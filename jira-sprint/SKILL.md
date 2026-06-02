@@ -102,7 +102,7 @@ for i in issues:
     rows.append([
         i['key'],
         (f.get('status')    or {}).get('name', '?'),
-        (f.get('summary')   or '')[:52],
+        (f.get('summary')   or ''),
         (f.get('priority')  or {}).get('name', '-'),
         str(f.get('customfield_10016') or '-'),
         fmt_time(f.get('timeoriginalestimate')),
