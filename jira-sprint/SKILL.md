@@ -24,20 +24,22 @@ Two independent steps — run either or both:
 PROJECT=SDSTOR
 SPRINT_PREFIX="SDS-CP-Sprint"
 
-SPRINT_ID=$(curl -s -H "Authorization: Bearer $JIRA_API_TOKEN" \
+TMP_SPRINT=$(mktemp)
+curl -s -H "Authorization: Bearer $JIRA_API_TOKEN" \
   "$JIRA_API_BASE_URL/rest/api/2/search" \
   -G --data-urlencode "jql=project = ${PROJECT} AND updated >= -15d ORDER BY updated DESC" \
   --data-urlencode "maxResults=200" \
-  --data-urlencode "fields=customfield_12501" | \
-  SPRINT_PREFIX="$SPRINT_PREFIX" python3 << 'EOF'
-import sys, json, re, os
+  --data-urlencode "fields=customfield_12501" > "$TMP_SPRINT"
+
+SPRINT_ID=$(TMP_FILE="$TMP_SPRINT" SPRINT_PREFIX="$SPRINT_PREFIX" python3 << 'EOF'
+import json, re, os
 prefix = os.environ.get('SPRINT_PREFIX', 'SDS-CP-Sprint')
 seen = {}
-for i in json.load(sys.stdin).get('issues', []):
+for i in json.load(open(os.environ['TMP_FILE'])).get('issues', []):
     for s in (i['fields'].get('customfield_12501') or []):
         raw = str(s)
-        m  = re.search(r'name=([^,\]]+)', raw)
-        st = re.search(r'state=([^,\]]+)', raw)
+        m   = re.search(r'name=([^,\]]+)', raw)
+        st  = re.search(r'state=([^,\]]+)', raw)
         sid = re.search(r'id=(\d+)', raw)
         if m and m.group(1).startswith(prefix) and st and st.group(1) == 'ACTIVE':
             seen[m.group(1)] = sid.group(1) if sid else '?'
@@ -46,6 +48,7 @@ for name, sid in sorted(seen.items()):
     break  # first ACTIVE sprint only
 EOF
 )
+rm "$TMP_SPRINT"
 
 echo "Sprint ID: $SPRINT_ID"
 ```
@@ -63,13 +66,15 @@ echo "Sprint ID: $SPRINT_ID"
 # Default: my tickets, sorted by updated desc
 JQL="sprint = ${SPRINT_ID} AND assignee = currentUser() ORDER BY updated DESC"
 
+TMP_TICKETS=$(mktemp)
 curl -s -H "Authorization: Bearer $JIRA_API_TOKEN" \
   "$JIRA_API_BASE_URL/rest/api/2/search" \
   -G --data-urlencode "jql=${JQL}" \
   --data-urlencode "maxResults=100" \
-  --data-urlencode "fields=summary,assignee,status,issuetype,priority,timespent,timeoriginalestimate,resolutiondate,project,customfield_10016" | \
-  python3 << 'EOF'
-import sys, json
+  --data-urlencode "fields=summary,assignee,status,issuetype,priority,timespent,timeoriginalestimate,resolutiondate,project,customfield_10016" > "$TMP_TICKETS"
+
+TMP_FILE="$TMP_TICKETS" python3 << 'EOF'
+import json, os
 from datetime import datetime, timezone
 
 def fmt_time(seconds):
@@ -90,8 +95,7 @@ def fmt_done(date_str):
         return dt.strftime('%Y-%m-%d')
     except: return date_str[:10]
 
-data   = json.load(sys.stdin)
-issues = data.get('issues', [])
+issues = json.load(open(os.environ['TMP_FILE'])).get('issues', [])
 rows   = []
 for i in issues:
     f = i['fields']
@@ -119,6 +123,7 @@ for r in rows:
     print(fmt.format(*r))
 print(f'\nTotal: {len(issues)} tickets')
 EOF
+rm "$TMP_TICKETS"
 ```
 
 ---
@@ -142,7 +147,7 @@ EOF
 - **`status != Done` misses Closed/Resolved** — use `status NOT IN (Done, Closed, Resolved)`.
 - **`currentUser()` fails** — ensure `$JIRA_API_TOKEN` is not expired.
 - **PTS all `-`** — `customfield_10016` varies by instance. Find correct field: add `&expand=names` to the API call and search for "Story Points".
-- **`python3 -c "...multiline..."` SyntaxError** — agent collapses newlines to `\n`. Always use heredoc `python3 << 'EOF'`.
+- **`curl ... | python3 << 'EOF'` SyntaxError** — heredoc takes over stdin; `sys.stdin` is empty. Always save curl output to a temp file (`TMP=$(mktemp); curl ... > "$TMP"`) and read via `json.load(open(os.environ['TMP_FILE']))`.
 
 ## Known Non-Working Approaches (Step 1)
 
