@@ -62,8 +62,14 @@ echo "Sprint ID: $SPRINT_ID"
 > **Skip this step** if you only need Sprint info.
 > Requires `$SPRINT_ID` from Step 1, or set manually: `SPRINT_ID=125626`
 
+> ⚠️ **Output rule:** Print the bash output **verbatim**. Do NOT reformat, summarize, or convert the table into a text list. The table IS the final answer.
+
 ```bash
 # Default: my tickets, sorted by updated desc
+# Adjust JQL filter as needed — always re-run the query, never manually filter the previous output
+# Examples:
+#   Exclude done:   AND status NOT IN (Done, Closed, Resolved)
+#   All assignees:  remove "AND assignee = currentUser()"
 JQL="sprint = ${SPRINT_ID} AND assignee = currentUser() ORDER BY updated DESC"
 
 TMP_TICKETS=$(mktemp)
