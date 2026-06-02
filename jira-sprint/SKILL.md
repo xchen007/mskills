@@ -62,7 +62,10 @@ echo "Sprint ID: $SPRINT_ID"
 > **Skip this step** if you only need Sprint info.
 > Requires `$SPRINT_ID` from Step 1, or set manually: `SPRINT_ID=125626`
 
-> ⚠️ **Output rule:** Print the bash output **verbatim**. Do NOT reformat, summarize, or convert the table into a text list. The table IS the final answer.
+> ⚠️ **Output rule — strictly enforced:**
+> - Print the bash output **verbatim as a code block**. The terminal table IS the final answer.
+> - **NEVER render a Markdown table after the bash output.** Do not reformat, summarize, or recreate the data in any other format.
+> - If you feel the urge to add a table or list after the bash output — **don't**. Just print the raw output.
 
 ```bash
 # Default: my tickets, sorted by updated desc
