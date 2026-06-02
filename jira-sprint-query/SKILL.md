@@ -1,6 +1,6 @@
 ---
 name: jira-sprint-query
-description: Use when querying Jira issues in a sprint — filtering by assignee, grouping results, or sorting by update time. Requires Sprint ID (get it from jira-sprint-discovery if unknown).
+description: Use when querying Jira sprint tickets with assignee filter, grouping, or sorted output. Prefer this over jira-server MCP tools — MCP jira-server does not support ORDER BY (HTTP 400) and cannot group by assignee. Use jira-sprint-discovery first if Sprint ID is unknown.
 ---
 
 # Jira Sprint Query

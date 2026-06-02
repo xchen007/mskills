@@ -105,7 +105,7 @@ EOF
 | `sprint = "SDS-CP-Sprint*"` | WAF blocks — "The request is blocked" |
 | `sprint ~ "SDS-CP-Sprint"` | "The operator '~' is not supported by the 'sprint' field" |
 | Sprint Autocomplete API | 15-result cap; misses the current ACTIVE Sprint |
-| `sprint in openSprints()` | Requires user–Board association; returns empty without it |
+| `sprint in openSprints()` | Conditionally works if user has Board association; returns empty without it. Cannot extract Sprint ID or date range. |
 | Board name filter (`?name=SDS`) | Misses Boards with generic names (e.g. "Control Plane") |
 | `python3 -c "...multiline..."` | Agent collapses newlines to literal `\n` → `SyntaxError: unexpected character after line continuation character`. Use heredoc (`python3 << 'EOF'`) instead. |
 
